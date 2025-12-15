@@ -25,21 +25,31 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* ----------- CHAT LOGIC ---------------- */
-let userId = prompt("Enter your username:");
+/* ----------- USERNAME ---------------- */
+let userId = localStorage.getItem("username");
+if (!userId) {
+  userId = prompt("Enter your username:").trim();
+  if (!userId) userId = "guest_" + Date.now();
+  localStorage.setItem("username", userId);
+}
 
-onValue(ref(db, "chats/" + userId), snap => {
-  const box = document.getElementById("msgs");
-  box.innerHTML = "";
-  snap.forEach(m => {
-    const d = document.createElement("div");
-    d.className = m.val().from === "admin" ? "msg admin" : "msg user";
-    d.innerText = m.val().text;
-    box.appendChild(d);
+/* ----------- LOAD PREVIOUS MESSAGES ---------------- */
+const msgsBox = document.getElementById("msgs");
+
+function loadMessages() {
+  onValue(ref(db, "chats/" + userId), snap => {
+    msgsBox.innerHTML = "";
+    snap.forEach(m => {
+      const d = document.createElement("div");
+      d.className = m.val().from === "admin" ? "msg admin" : "msg user";
+      d.innerText = m.val().text;
+      msgsBox.appendChild(d);
+    });
+    msgsBox.scrollTop = msgsBox.scrollHeight;
   });
-  box.scrollTop = box.scrollHeight;
-});
+}
 
+/* ----------- SEND MESSAGE ---------------- */
 window.sendMsg = () => {
   const input = document.getElementById("text");
   if (!input.value) return;
@@ -52,6 +62,8 @@ window.sendMsg = () => {
 
   input.value = "";
 };
+
+window.onload = loadMessages;
 </script>
 
 <style>
