@@ -26,8 +26,9 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 /* ----------- AUDIO ---------------- */
-const sendAudio = new Audio("send.mp3");
-const receiveAudio = new Audio("receive.mp3");
+const sendAudio = new Audio("/send.mp3");
+const receiveAudio = new Audio("/receive.mp3");
+const popAudio = new Audio("/pop.mp3"); // pop sound on message sent
 
 /* ----------- USERNAME ---------------- */
 let userId = localStorage.getItem("username");
@@ -51,13 +52,20 @@ function loadMessages() {
     snap.forEach(m => {
       const val = m.val();
       if (!val || !val.text) return;
+
       const d = document.createElement("div");
-      d.className = val.from === "admin" ? "msg admin" : "msg user";
+      d.className = val.from === "admin" ? "msg admin slide-left" : "msg user slide-right";
       d.innerText = val.text;
       msgsBox.appendChild(d);
 
-      // Play receive sound only for admin messages
-      if (val.from === "admin") receiveAudio.play();
+      // Animate
+      setTimeout(()=>d.classList.add("slide-in"),50);
+
+      // Receive sound for admin messages
+      if (val.from === "admin") {
+        receiveAudio.currentTime = 0;
+        receiveAudio.play().catch(e => console.log("Receive audio error:", e));
+      }
     });
     msgsBox.scrollTop = msgsBox.scrollHeight;
   });
@@ -82,8 +90,9 @@ window.sendMsg = async () => {
     time: Date.now()
   });
 
-  // Play send sound
-  sendAudio.play();
+  // Play send + pop sound
+  sendAudio.currentTime = 0; sendAudio.play().catch(e => console.log("Send audio error:", e));
+  popAudio.currentTime = 0; popAudio.play().catch(e => console.log("Pop audio error:", e));
 
   input.value = "";
 };
@@ -98,13 +107,14 @@ window.onload = () => {
 <style>
 body{margin:0;font-family:Poppins;background:#0b0a1a;color:#fff}
 .app{display:flex;flex-direction:column;height:100vh}
-.header{padding:14px;background:#120c22;text-align:center}
-.msgs{flex:1;padding:14px;overflow:auto}
-.msg{background:linear-gradient(135deg,#ff2f6d,#ff8a00);padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%}
-.msg.user{background:linear-gradient(135deg,#1e90ff,#00d4ff);margin-left:auto}
+.header{padding:14px;background:#120c22;text-align:center;font-weight:500}
+.msgs{flex:1;padding:14px;overflow:auto;display:flex;flex-direction:column}
+.msg{background:linear-gradient(135deg,#ff2f6d,#ff8a00);padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%;opacity:0;transform:translateX(-50px);transition:0.3s ease-out}
+.msg.user{background:linear-gradient(135deg,#1e90ff,#00d4ff);margin-left:auto;transform:translateX(50px)}
+.slide-in{opacity:1;transform:translateX(0);}
 .input{display:flex;padding:10px;align-items:center}
-input{flex:1;padding:10px;border-radius:50px;border:none;outline:none;background:#1e1e2f;color:#fff;font-size:16px;padding-left:16px}
-button{margin-left:10px;border:none;border-radius:50%;width:50px;height:50px;background:#0088cc;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;transition:0.2s}
+input{flex:1;padding:12px 16px;border-radius:50px;border:none;outline:none;background:#1e1e2f;color:#fff;font-size:16px}
+button{height:50px;width:50px;margin-left:10px;border-radius:50%;border:none;background:#0088cc;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;transition:0.2s}
 button:hover{background:#00aaff}
 </style>
 </head>
