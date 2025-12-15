@@ -117,6 +117,62 @@ onValue(ref(db, "chats/admin/typing"), snap => {
   typingIndicator.style.display = isTyping ? "block" : "none";
 });
 
+/* ----------- SCREENSHOT & BLACK OVERLAY ---------------- */
+const overlay = document.createElement('div');
+overlay.style.position = 'fixed';
+overlay.style.top = '0';
+overlay.style.left = '0';
+overlay.style.width = '100%';
+overlay.style.height = '100%';
+overlay.style.backgroundColor = '#000';
+overlay.style.zIndex = '9999';
+overlay.style.opacity = '0';
+overlay.style.transition = 'opacity 0.5s ease';
+overlay.style.pointerEvents = 'none'; // allow underlying interactions
+document.body.appendChild(overlay);
+
+function showOverlay() {
+  overlay.style.pointerEvents = 'auto';
+  overlay.style.opacity = '1';
+}
+
+function hideOverlay() {
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    overlay.style.pointerEvents = 'none';
+  }, 500);
+}
+
+// Visibility change (app switch / screen attempt)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) showOverlay();
+  else hideOverlay();
+});
+
+// Window blur/focus
+window.addEventListener('blur', showOverlay);
+window.addEventListener('focus', hideOverlay);
+
+// Multi-touch / long press detection
+document.addEventListener('touchstart', e => {
+  if (e.touches.length > 1) {
+    showOverlay();
+    setTimeout(hideOverlay, 1000);
+  }
+});
+
+// Block Print Screen key (desktop)
+document.addEventListener('keydown', e => {
+  if (e.key === 'PrintScreen') {
+    e.preventDefault();
+    alert("Screenshots are disabled! ❌");
+  }
+});
+
+// Optional: right-click block
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ----------- INIT ---------------- */
 window.onload = () => {
   updateLastActive();
   setInterval(updateLastActive, 30000);
