@@ -9,7 +9,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, push, onValue, update, get, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 /* ----------- FIREBASE ---------------- */
 const firebaseConfig = {
@@ -33,7 +33,12 @@ if (!userId) {
   localStorage.setItem("username", userId);
 }
 
-/* ----------- LOAD PREVIOUS MESSAGES ---------------- */
+/* ----------- SET LAST ACTIVE ---------------- */
+function updateLastActive() {
+  update(ref(db, "chats/" + userId), { lastActive: Date.now() });
+}
+
+/* ----------- LOAD MESSAGES ---------------- */
 const msgsBox = document.getElementById("msgs");
 
 function loadMessages() {
@@ -49,11 +54,22 @@ function loadMessages() {
   });
 }
 
-/* ----------- SEND MESSAGE ---------------- */
-window.sendMsg = () => {
+/* ----------- SEND MESSAGE WITH BLOCK CHECK ---------------- */
+window.sendMsg = async () => {
   const input = document.getElementById("text");
   if (!input.value) return;
 
+  // Check if blocked
+  const snapshot = await get(ref(db, "chats/" + userId + "/blocked"));
+  if (snapshot.exists() && snapshot.val() === true) {
+    alert("You are blocked by admin! ❌");
+    return;
+  }
+
+  // Update last active
+  updateLastActive();
+
+  // Send message
   push(ref(db, "chats/" + userId), {
     from: "user",
     text: input.value,
@@ -63,7 +79,13 @@ window.sendMsg = () => {
   input.value = "";
 };
 
-window.onload = loadMessages;
+window.onload = () => {
+  // Update last active every 30 seconds
+  updateLastActive();
+  setInterval(updateLastActive, 30000);
+
+  loadMessages();
+};
 </script>
 
 <style>
