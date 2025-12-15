@@ -9,7 +9,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, update, get, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 /* ----------- FIREBASE ---------------- */
 const firebaseConfig = {
@@ -33,7 +33,7 @@ if (!userId) {
   localStorage.setItem("username", userId);
 }
 
-/* ----------- SET LAST ACTIVE ---------------- */
+/* ----------- LAST ACTIVE ---------------- */
 function updateLastActive() {
   update(ref(db, "chats/" + userId), { lastActive: Date.now() });
 }
@@ -45,9 +45,11 @@ function loadMessages() {
   onValue(ref(db, "chats/" + userId), snap => {
     msgsBox.innerHTML = "";
     snap.forEach(m => {
+      const val = m.val();
+      if (!val || !val.text) return; // skip non-message objects
       const d = document.createElement("div");
-      d.className = m.val().from === "admin" ? "msg admin" : "msg user";
-      d.innerText = m.val().text;
+      d.className = val.from === "admin" ? "msg admin" : "msg user";
+      d.innerText = val.text;
       msgsBox.appendChild(d);
     });
     msgsBox.scrollTop = msgsBox.scrollHeight;
@@ -59,17 +61,14 @@ window.sendMsg = async () => {
   const input = document.getElementById("text");
   if (!input.value) return;
 
-  // Check if blocked
   const snapshot = await get(ref(db, "chats/" + userId + "/blocked"));
   if (snapshot.exists() && snapshot.val() === true) {
     alert("You are blocked by admin! ❌");
     return;
   }
 
-  // Update last active
   updateLastActive();
 
-  // Send message
   push(ref(db, "chats/" + userId), {
     from: "user",
     text: input.value,
@@ -80,10 +79,8 @@ window.sendMsg = async () => {
 };
 
 window.onload = () => {
-  // Update last active every 30 seconds
   updateLastActive();
   setInterval(updateLastActive, 30000);
-
   loadMessages();
 };
 </script>
@@ -103,7 +100,6 @@ button{margin-left:10px;border:none;border-radius:50%;width:40px;background:#ff2
 
 <body>
 <div class="app">
-
   <div class="header">User Chat</div>
   <div class="msgs" id="msgs"></div>
 
@@ -111,7 +107,6 @@ button{margin-left:10px;border:none;border-radius:50%;width:40px;background:#ff2
     <input id="text" placeholder="Type message..." />
     <button onclick="sendMsg()">➤</button>
   </div>
-
 </div>
 </body>
 </html>
