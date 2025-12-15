@@ -43,7 +43,7 @@ button:active{transform:scale(0.9);}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-/* FIREBASE */
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyAqfguS1ucAtklcl06eB1JIWQr46XMpe7g",
   authDomain: "safe-chat-c0b9c.firebaseapp.com",
@@ -53,6 +53,7 @@ const firebaseConfig = {
   messagingSenderId: "119640275300",
   appId: "1:119640275300:web:20ae984f4af1ffe6a62271"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -78,19 +79,21 @@ function updateLastActive(){
 
 /* LOAD MESSAGES */
 function loadMessages(){
-  onValue(ref(db,"chats/"+userId),snap=>{
-    msgsBox.innerHTML="";
+  const messagesRef = ref(db,"chats/"+userId+"/messages");
+  onValue(messagesRef, snap=>{
+    msgsBox.innerHTML = "";
     snap.forEach(m=>{
       const v = m.val();
       if(!v?.text) return;
 
       const d = document.createElement("div");
-      d.className = "msg " + (v.from==="admin"?"admin":"user");
+      d.className = "msg "+(v.from==="admin"?"admin":"user");
       d.textContent = v.text;
 
+      // ticks only for user messages
       if(v.from==="user"){
         const tick = document.createElement("div");
-        tick.className="tick";
+        tick.className = "tick";
         tick.textContent = v.seen ? "✓✓" : (v.delivered ? "✓✓" : "✓");
         if(v.seen) tick.classList.add("seen");
         d.appendChild(tick);
@@ -98,8 +101,8 @@ function loadMessages(){
 
       msgsBox.appendChild(d);
 
-      // delivered & seen logic
-      const msgRef = ref(db,"chats/"+userId+"/"+m.key);
+      // Update delivered & seen automatically
+      const msgRef = ref(db,"chats/"+userId+"/messages/"+m.key);
       if(v.from==="user" && !v.delivered){
         update(msgRef,{delivered:true});
       }
@@ -109,14 +112,17 @@ function loadMessages(){
       if(v.from==="admin" && !v.delivered){
         update(msgRef,{delivered:true});
       }
+
+      // Play receive sound for admin messages
+      if(v.from==="admin") receiveSound.play().catch(()=>{});
     });
     msgsBox.scrollTop = msgsBox.scrollHeight;
   });
 }
 
 /* SEND MESSAGE */
-window.sendMsg=async()=>{
-  const input=document.getElementById("text");
+window.sendMsg = async () => {
+  const input = document.getElementById("text");
   if(!input.value.trim()) return;
 
   const blockedSnap = await get(ref(db,"chats/"+userId+"/blocked"));
@@ -125,12 +131,12 @@ window.sendMsg=async()=>{
     return;
   }
 
-  await push(ref(db,"chats/"+userId),{
+  await push(ref(db,"chats/"+userId+"/messages"),{
     from:"user",
-    text:input.value,
-    time:Date.now(),
-    delivered:false,
-    seen:false
+    text: input.value,
+    time: Date.now(),
+    delivered: false,
+    seen: false
   });
 
   sendSound.play().catch(()=>{});
@@ -139,7 +145,7 @@ window.sendMsg=async()=>{
 };
 
 /* INIT */
-window.onload=()=>{
+window.onload = () => {
   msgsBox = document.getElementById("msgs");
   updateLastActive();
   setInterval(updateLastActive,30000);
@@ -147,4 +153,4 @@ window.onload=()=>{
 };
 </script>
 </body>
-    </html>
+  </html>
