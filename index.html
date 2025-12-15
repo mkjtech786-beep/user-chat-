@@ -3,15 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Chat</title>
+<title>MAHTAB SAFE CHAT</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+  margin:0;
+  font-family:Poppins;
+  background:#0b0a1a;
+  color:#fff
+}
+.app{
+  display:flex;
+  flex-direction:column;
+  height:100vh
+}
+.header{
+  padding:14px;
+  background:#120c22;
+  text-align:center;
+  font-weight:600
+}
+.msgs{
+  flex:1;
+  padding:14px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column
+}
+.msg{
+  padding:10px 12px;
+  border-radius:14px;
+  margin-bottom:8px;
+  max-width:70%;
+  word-wrap:break-word;
+  animation:fadeUp 0.3s ease;
+  position:relative;
+}
+.msg.admin{
+  background:linear-gradient(135deg,#ff2f6d,#ff8a00)
+}
+.msg.user{
+  background:linear-gradient(135deg,#1e90ff,#00d4ff);
+  margin-left:auto
+}
+.tick{
+  position:absolute;
+  bottom:4px;
+  right:8px;
+  font-size:12px;
+  color:gray;
+}
+.tick.seen{ color:#2196f3; }
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(15px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.input{
+  display:flex;
+  padding:10px;
+  align-items:center
+}
+.input-border{
+  flex:1;
+  padding:2px;
+  border-radius:30px;
+  background:linear-gradient(270deg,#ff2f6d,#1e90ff,#00d4ff,#ff8a00);
+  background-size:600% 600%;
+  animation:borderMove 4s ease infinite
+}
+.input-border input{
+  width:100%;
+  padding:12px 14px;
+  border:none;
+  outline:none;
+  border-radius:26px;
+  background:#0b0a1a;
+  color:#fff;
+  font-size:14px
+}
+
+button{
+  margin-left:10px;
+  width:42px;
+  height:42px;
+  border:none;
+  border-radius:50%;
+  background:#ff2f6d;
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+  transition:0.2s
+}
+button:active{transform:scale(0.9)}
+
+@keyframes borderMove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <div class="header">MAHTAB SAFE CHAT</div>
+  <div class="msgs" id="msgs"></div>
+
+  <div class="input">
+    <div class="input-border">
+      <input id="text" placeholder="Type message..." />
+    </div>
+    <button onclick="sendMsg()">➤</button>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-/* ----------- FIREBASE ---------------- */
+/* FIREBASE */
 const firebaseConfig = {
   apiKey: "AIzaSyAqfguS1ucAtklcl06eB1JIWQr46XMpe7g",
   authDomain: "safe-chat-c0b9c.firebaseapp.com",
@@ -25,160 +139,99 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* ----------- USERNAME ---------------- */
+/* USERNAME */
 let userId = localStorage.getItem("username");
 if (!userId) {
-  userId = prompt("Enter your username:").trim();
-  if (!userId) userId = "guest_" + Date.now();
+  userId = prompt("Enter your username:")?.trim() || "guest_" + Date.now();
   localStorage.setItem("username", userId);
 }
 
-/* ----------- LAST ACTIVE ---------------- */
-function updateLastActive() {
-  update(ref(db, "chats/" + userId), { lastActive: Date.now() });
-}
-
-/* ----------- SOUND EFFECTS ---------------- */
+/* SOUNDS */
 const sendSound = new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3");
 const receiveSound = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3");
+sendSound.load();
+receiveSound.load();
 
-/* ----------- LOAD MESSAGES ---------------- */
-const msgsBox = document.getElementById("msgs");
-const typingIndicator = document.getElementById("typingIndicator");
+let msgsBox;
 
-function loadMessages() {
-  onValue(ref(db, "chats/" + userId), snap => {
-    msgsBox.innerHTML = "";
-    snap.forEach(m => {
-      const val = m.val();
-      if (!val || !val.text) return;
-      const d = document.createElement("div");
-      d.className = val.from === "admin" ? "msg admin" : "msg user";
-      d.innerText = val.text;
+/* LAST ACTIVE */
+function updateLastActive(){
+  update(ref(db,"chats/"+userId),{lastActive:Date.now()});
+}
+
+/* LOAD MESSAGES */
+function loadMessages(){
+  onValue(ref(db,"chats/"+userId),snap=>{
+    msgsBox.innerHTML="";
+    snap.forEach(m=>{
+      const v=m.val();
+      if(!v?.text) return;
+
+      const d=document.createElement("div");
+      d.className="msg "+(v.from==="admin"?"admin":"user");
+      d.textContent=v.text;
+
+      // ticks for user messages
+      if(v.from==="user"){
+        const tick = document.createElement("div");
+        tick.className="tick";
+        tick.textContent = v.seen ? "✓✓" : (v.delivered ? "✓✓" : "✓");
+        if(v.seen) tick.classList.add("seen");
+        d.appendChild(tick);
+      }
+
       msgsBox.appendChild(d);
-      if (val.from === "admin") receiveSound.play();
+
+      if(v.from==="admin"){
+        receiveSound.play().catch(()=>{});
+
+        // mark delivered
+        if(!v.delivered){
+          update(ref(db,"chats/"+userId+"/"+m.key),{delivered:true});
+        }
+
+        // mark seen automatically when admin sends (simulate)
+        if(!v.seen){
+          update(ref(db,"chats/"+userId+"/"+m.key),{seen:true});
+        }
+      }
     });
-    msgsBox.scrollTop = msgsBox.scrollHeight;
+    msgsBox.scrollTop=msgsBox.scrollHeight;
   });
 }
 
-/* ----------- SEND MESSAGE ---------------- */
-window.sendMsg = async () => {
-  const input = document.getElementById("text");
-  if (!input.value) return;
+/* SEND MESSAGE */
+window.sendMsg=async()=>{
+  const input=document.getElementById("text");
+  if(!input.value.trim()) return;
 
-  const snapshot = await get(ref(db, "chats/" + userId + "/blocked"));
-  if (snapshot.exists() && snapshot.val() === true) {
-    alert("You are blocked by admin! ❌");
+  const snap=await get(ref(db,"chats/"+userId+"/blocked"));
+  if(snap.exists() && snap.val()===true){
+    alert("You are blocked ❌");
     return;
   }
 
-  updateLastActive();
-
-  push(ref(db, "chats/" + userId), {
-    from: "user",
-    text: input.value,
-    time: Date.now()
+  const newMsgRef = push(ref(db,"chats/"+userId));
+  await newMsgRef.set({
+    from:"user",
+    text:input.value,
+    time:Date.now(),
+    delivered:false,
+    seen:false
   });
 
-  sendSound.play();
-  input.value = "";
-  update(ref(db, "chats/" + userId), { typing: false });
+  sendSound.play().catch(()=>{});
+  input.value="";
+  updateLastActive();
 };
 
-/* ----------- TYPING ---------------- */
-let typingTimeout;
-const messageInput = document.getElementById("text");
-
-messageInput.addEventListener("input", () => {
-  update(ref(db, "chats/" + userId), { typing: true });
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => {
-    update(ref(db, "chats/" + userId), { typing: false });
-  }, 1000);
-});
-
-onValue(ref(db, "chats/admin/typing"), snap => {
-  typingIndicator.style.display = snap.val() ? "block" : "none";
-});
-
-window.onload = () => {
+/* INIT */
+window.onload=()=>{
+  msgsBox=document.getElementById("msgs");
   updateLastActive();
-  setInterval(updateLastActive, 30000);
+  setInterval(updateLastActive,30000);
   loadMessages();
 };
 </script>
-
-<style>
-body{margin:0;font-family:Poppins;background:#0b0a1a;color:#fff}
-.app{display:flex;flex-direction:column;height:100vh}
-.header{padding:14px;background:#120c22;text-align:center;font-weight:600}
-.msgs{flex:1;padding:14px;overflow:auto;display:flex;flex-direction:column}
-.msg{padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%;animation:fadeIn .3s}
-.msg.admin{background:linear-gradient(135deg,#ff2f6d,#ff8a00)}
-.msg.user{background:linear-gradient(135deg,#1e90ff,#00d4ff);margin-left:auto}
-
-#typingIndicator{font-style:italic;color:#aaa;padding:0 14px;margin-bottom:6px}
-
-/* 🔥 ANIMATED GRADIENT INPUT */
-.input{display:flex;padding:10px;align-items:center}
-.input-border{
-  flex:1;
-  padding:2px;
-  border-radius:30px;
-  background:linear-gradient(270deg,#ff2f6d,#1e90ff,#00d4ff,#ff8a00);
-  background-size:600% 600%;
-  animation:borderMove 4s ease infinite;
-}
-.input-border input{
-  width:100%;
-  padding:12px 14px;
-  border:none;
-  outline:none;
-  border-radius:26px;
-  background:#0b0a1a;
-  color:#fff;
-  font-size:14px;
-}
-
-button{
-  margin-left:10px;
-  border:none;
-  border-radius:50%;
-  width:42px;
-  height:42px;
-  background:#ff2f6d;
-  color:#fff;
-  font-size:18px;
-  cursor:pointer;
-  transition:.2s;
-}
-button:hover{transform:scale(1.1)}
-
-@keyframes borderMove{
-  0%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-  100%{background-position:0% 50%}
-}
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(20px)}
-  to{opacity:1;transform:translateY(0)}
-}
-</style>
-</head>
-
-<body>
-<div class="app">
-  <div class="header">User Chat</div>
-  <div class="msgs" id="msgs"></div>
-  <div id="typingIndicator">Admin is typing...</div>
-
-  <div class="input">
-    <div class="input-border">
-      <input id="text" placeholder="Type message..." />
-    </div>
-    <button onclick="sendMsg()">➤</button>
-  </div>
-</div>
 </body>
-</html>
+  </html>
