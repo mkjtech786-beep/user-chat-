@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Chat</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+/* ----------- FIREBASE ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAqfguS1ucAtklcl06eB1JIWQr46XMpe7g",
+  authDomain: "safe-chat-c0b9c.firebaseapp.com",
+  databaseURL: "https://safe-chat-c0b9c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "safe-chat-c0b9c",
+  storageBucket: "safe-chat-c0b9c.firebasestorage.app",
+  messagingSenderId: "119640275300",
+  appId: "1:119640275300:web:20ae984f4af1ffe6a62271"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ----------- CHAT LOGIC ---------------- */
+let userId = prompt("Enter your username:");
+
+onValue(ref(db, "chats/" + userId), snap => {
+  const box = document.getElementById("msgs");
+  box.innerHTML = "";
+  snap.forEach(m => {
+    const d = document.createElement("div");
+    d.className = m.val().from === "admin" ? "msg admin" : "msg user";
+    d.innerText = m.val().text;
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+});
+
+window.sendMsg = () => {
+  const input = document.getElementById("text");
+  if (!input.value) return;
+
+  push(ref(db, "chats/" + userId), {
+    from: "user",
+    text: input.value,
+    time: Date.now()
+  });
+
+  input.value = "";
+};
+</script>
+
+<style>
+body{margin:0;font-family:Poppins;background:#0b0a1a;color:#fff}
+.app{display:flex;flex-direction:column;height:100vh}
+.header{padding:14px;background:#120c22;text-align:center}
+.msgs{flex:1;padding:14px;overflow:auto}
+.msg{background:linear-gradient(135deg,#ff2f6d,#ff8a00);padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%}
+.msg.user{background:linear-gradient(135deg,#1e90ff,#00d4ff);margin-left:auto}
+.input{display:flex;padding:10px}
+input{flex:1;padding:10px;border-radius:20px;border:none;outline:none}
+button{margin-left:10px;border:none;border-radius:50%;width:40px;background:#ff2f6d;color:#fff;font-size:18px}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <div class="header">User Chat</div>
+  <div class="msgs" id="msgs"></div>
+
+  <div class="input">
+    <input id="text" placeholder="Type message..." />
+    <button onclick="sendMsg()">➤</button>
+  </div>
+
+</div>
+</body>
+</html>
