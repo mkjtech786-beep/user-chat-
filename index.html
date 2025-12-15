@@ -39,8 +39,8 @@ function updateLastActive() {
 }
 
 /* ----------- SOUND EFFECTS ---------------- */
-const sendSound = new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3"); // send sound
-const receiveSound = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3"); // receive sound
+const sendSound = new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3");
+const receiveSound = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3");
 
 /* ----------- LOAD MESSAGES ---------------- */
 const msgsBox = document.getElementById("msgs");
@@ -51,29 +51,18 @@ function loadMessages() {
     msgsBox.innerHTML = "";
     snap.forEach(m => {
       const val = m.val();
-      if (!val || !val.text) return; 
+      if (!val || !val.text) return;
       const d = document.createElement("div");
       d.className = val.from === "admin" ? "msg admin" : "msg user";
       d.innerText = val.text;
-
-      // simple fade-in animation
-      d.style.opacity = 0;
-      d.style.transform = "translateY(20px)";
       msgsBox.appendChild(d);
-      setTimeout(() => {
-        d.style.transition = "all 0.3s ease";
-        d.style.opacity = 1;
-        d.style.transform = "translateY(0)";
-      }, 50);
-
-      // play receive sound for admin messages
       if (val.from === "admin") receiveSound.play();
     });
     msgsBox.scrollTop = msgsBox.scrollHeight;
   });
 }
 
-/* ----------- SEND MESSAGE WITH BLOCK CHECK ---------------- */
+/* ----------- SEND MESSAGE ---------------- */
 window.sendMsg = async () => {
   const input = document.getElementById("text");
   if (!input.value) return;
@@ -92,14 +81,12 @@ window.sendMsg = async () => {
     time: Date.now()
   });
 
-  sendSound.play(); // play send sound
+  sendSound.play();
   input.value = "";
-
-  // stop typing status on send
   update(ref(db, "chats/" + userId), { typing: false });
 };
 
-/* ----------- TYPING INDICATOR ---------------- */
+/* ----------- TYPING ---------------- */
 let typingTimeout;
 const messageInput = document.getElementById("text");
 
@@ -111,68 +98,10 @@ messageInput.addEventListener("input", () => {
   }, 1000);
 });
 
-// Listen for admin typing
 onValue(ref(db, "chats/admin/typing"), snap => {
-  const isTyping = snap.val();
-  typingIndicator.style.display = isTyping ? "block" : "none";
+  typingIndicator.style.display = snap.val() ? "block" : "none";
 });
 
-/* ----------- SCREENSHOT & BLACK OVERLAY ---------------- */
-const overlay = document.createElement('div');
-overlay.style.position = 'fixed';
-overlay.style.top = '0';
-overlay.style.left = '0';
-overlay.style.width = '100%';
-overlay.style.height = '100%';
-overlay.style.backgroundColor = '#000';
-overlay.style.zIndex = '9999';
-overlay.style.opacity = '0';
-overlay.style.transition = 'opacity 0.5s ease';
-overlay.style.pointerEvents = 'none'; // allow underlying interactions
-document.body.appendChild(overlay);
-
-function showOverlay() {
-  overlay.style.pointerEvents = 'auto';
-  overlay.style.opacity = '1';
-}
-
-function hideOverlay() {
-  overlay.style.opacity = '0';
-  setTimeout(() => {
-    overlay.style.pointerEvents = 'none';
-  }, 500);
-}
-
-// Visibility change (app switch / screen attempt)
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) showOverlay();
-  else hideOverlay();
-});
-
-// Window blur/focus
-window.addEventListener('blur', showOverlay);
-window.addEventListener('focus', hideOverlay);
-
-// Multi-touch / long press detection
-document.addEventListener('touchstart', e => {
-  if (e.touches.length > 1) {
-    showOverlay();
-    setTimeout(hideOverlay, 1000);
-  }
-});
-
-// Block Print Screen key (desktop)
-document.addEventListener('keydown', e => {
-  if (e.key === 'PrintScreen') {
-    e.preventDefault();
-    alert("Screenshots are disabled! ❌");
-  }
-});
-
-// Optional: right-click block
-document.addEventListener('contextmenu', e => e.preventDefault());
-
-/* ----------- INIT ---------------- */
 window.onload = () => {
   updateLastActive();
   setInterval(updateLastActive, 30000);
@@ -185,16 +114,55 @@ body{margin:0;font-family:Poppins;background:#0b0a1a;color:#fff}
 .app{display:flex;flex-direction:column;height:100vh}
 .header{padding:14px;background:#120c22;text-align:center;font-weight:600}
 .msgs{flex:1;padding:14px;overflow:auto;display:flex;flex-direction:column}
-.msg{background:linear-gradient(135deg,#ff2f6d,#ff8a00);padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%;word-wrap:break-word;animation:fadeIn 0.3s ease forwards}
+.msg{padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%;animation:fadeIn .3s}
+.msg.admin{background:linear-gradient(135deg,#ff2f6d,#ff8a00)}
 .msg.user{background:linear-gradient(135deg,#1e90ff,#00d4ff);margin-left:auto}
-.input{display:flex;padding:10px}
-input{flex:1;padding:10px;border-radius:20px;border:none;outline:none}
-button{margin-left:10px;border:none;border-radius:50%;width:40px;background:#ff2f6d;color:#fff;font-size:18px;cursor:pointer;transition:all 0.2s}
+
+#typingIndicator{font-style:italic;color:#aaa;padding:0 14px;margin-bottom:6px}
+
+/* 🔥 ANIMATED GRADIENT INPUT */
+.input{display:flex;padding:10px;align-items:center}
+.input-border{
+  flex:1;
+  padding:2px;
+  border-radius:30px;
+  background:linear-gradient(270deg,#ff2f6d,#1e90ff,#00d4ff,#ff8a00);
+  background-size:600% 600%;
+  animation:borderMove 4s ease infinite;
+}
+.input-border input{
+  width:100%;
+  padding:12px 14px;
+  border:none;
+  outline:none;
+  border-radius:26px;
+  background:#0b0a1a;
+  color:#fff;
+  font-size:14px;
+}
+
+button{
+  margin-left:10px;
+  border:none;
+  border-radius:50%;
+  width:42px;
+  height:42px;
+  background:#ff2f6d;
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+  transition:.2s;
+}
 button:hover{transform:scale(1.1)}
-#typingIndicator{font-style:italic;color:#ccc;padding:0 14px;margin-bottom:6px;display:none}
-@keyframes fadeIn {
-  0%{opacity:0;transform:translateY(20px)}
-  100%{opacity:1;transform:translateY(0)}
+
+@keyframes borderMove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
 }
 </style>
 </head>
@@ -206,7 +174,9 @@ button:hover{transform:scale(1.1)}
   <div id="typingIndicator">Admin is typing...</div>
 
   <div class="input">
-    <input id="text" placeholder="Type message..." />
+    <div class="input-border">
+      <input id="text" placeholder="Type message..." />
+    </div>
     <button onclick="sendMsg()">➤</button>
   </div>
 </div>
