@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>User Chat</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-// ----------- FIREBASE -----------
+/* ----------- FIREBASE ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyAqfguS1ucAtklcl06eB1JIWQr46XMpe7g",
   authDomain: "safe-chat-c0b9c.firebaseapp.com",
@@ -24,79 +25,62 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ----------- AUDIO -----------
-const sendAudio = new Audio("/send.mp3");
-const receiveAudio = new Audio("/receive.mp3");
-
-// ----------- USERNAME -----------
+/* ----------- USERNAME ---------------- */
 let userId = localStorage.getItem("username");
-if(!userId){
-  userId = prompt("Enter username:").trim() || "guest_" + Date.now();
+if (!userId) {
+  userId = prompt("Enter your username:").trim();
+  if (!userId) userId = "guest_" + Date.now();
   localStorage.setItem("username", userId);
 }
 
-// ----------- LAST ACTIVE -----------
+/* ----------- LAST ACTIVE ---------------- */
 function updateLastActive() {
-  update(ref(db,"chats/"+userId), { lastActive: Date.now() });
+  update(ref(db, "chats/" + userId), { lastActive: Date.now() });
 }
 
-// ----------- LOAD MESSAGES -----------
+/* ----------- LOAD MESSAGES ---------------- */
 const msgsBox = document.getElementById("msgs");
 
-function loadMessages(){
-  onValue(ref(db,"chats/"+userId), snap=>{
+function loadMessages() {
+  onValue(ref(db, "chats/" + userId), snap => {
     msgsBox.innerHTML = "";
-    snap.forEach(m=>{
+    snap.forEach(m => {
       const val = m.val();
-      if(!val || !val.text) return;
-
-      const div = document.createElement("div");
-      div.className = val.from==="admin"?"msg admin":"msg user";
-      div.innerText = val.text;
-      msgsBox.appendChild(div);
-
-      // Slide animation
-      div.classList.add("slide-in");
-
-      // Receive sound for admin
-      if(val.from==="admin"){
-        receiveAudio.currentTime=0;
-        receiveAudio.play().catch(e=>console.log("Receive audio error",e));
-      }
+      if (!val || !val.text) return; // skip non-message objects
+      const d = document.createElement("div");
+      d.className = val.from === "admin" ? "msg admin" : "msg user";
+      d.innerText = val.text;
+      msgsBox.appendChild(d);
     });
     msgsBox.scrollTop = msgsBox.scrollHeight;
   });
 }
 
-// ----------- SEND MESSAGE -----------
+/* ----------- SEND MESSAGE WITH BLOCK CHECK ---------------- */
 window.sendMsg = async () => {
   const input = document.getElementById("text");
-  if(!input.value) return;
+  if (!input.value) return;
 
-  const snapshot = await get(ref(db,"chats/"+userId+"/blocked"));
-  if(snapshot.exists() && snapshot.val()===true){
+  const snapshot = await get(ref(db, "chats/" + userId + "/blocked"));
+  if (snapshot.exists() && snapshot.val() === true) {
     alert("You are blocked by admin! ❌");
     return;
   }
 
   updateLastActive();
 
-  push(ref(db,"chats/"+userId), {
-    from:"user",
-    text:input.value,
-    time:Date.now()
+  push(ref(db, "chats/" + userId), {
+    from: "user",
+    text: input.value,
+    time: Date.now()
   });
 
-  // Send sound
-  sendAudio.currentTime=0;
-  sendAudio.play().catch(e=>console.log("Send audio error",e));
-
-  input.value="";
+  input.value = "";
 };
 
-window.onload = ()=>{
+window.onload = () => {
   updateLastActive();
-  setInterval(updateLastActive,30000);
+  setInterval(updateLastActive, 30000);
   loadMessages();
 };
 </script>
@@ -104,15 +88,13 @@ window.onload = ()=>{
 <style>
 body{margin:0;font-family:Poppins;background:#0b0a1a;color:#fff}
 .app{display:flex;flex-direction:column;height:100vh}
-.header{padding:14px;background:#120c22;text-align:center;font-weight:500}
-.msgs{flex:1;padding:14px;overflow:auto;display:flex;flex-direction:column}
-.msg{background:linear-gradient(135deg,#ff2f6d,#ff8a00);padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%;opacity:0;transform:translateX(-50px);transition:all 0.3s ease-out}
-.msg.user{background:linear-gradient(135deg,#1e90ff,#00d4ff);margin-left:auto;transform:translateX(50px);}
-.slide-in{opacity:1;transform:translateX(0);}
-.input{display:flex;padding:10px;align-items:center}
-input{flex:1;padding:12px 16px;border-radius:50px;border:none;outline:none;background:#1e1e2f;color:#fff;font-size:16px}
-button{height:50px;width:50px;margin-left:10px;border-radius:50%;border:none;background:#0088cc;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;transition:0.2s}
-button:hover{background:#00aaff}
+.header{padding:14px;background:#120c22;text-align:center}
+.msgs{flex:1;padding:14px;overflow:auto}
+.msg{background:linear-gradient(135deg,#ff2f6d,#ff8a00);padding:10px;border-radius:14px;margin-bottom:8px;max-width:70%}
+.msg.user{background:linear-gradient(135deg,#1e90ff,#00d4ff);margin-left:auto}
+.input{display:flex;padding:10px}
+input{flex:1;padding:10px;border-radius:20px;border:none;outline:none}
+button{margin-left:10px;border:none;border-radius:50%;width:40px;background:#ff2f6d;color:#fff;font-size:18px}
 </style>
 </head>
 
